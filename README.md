@@ -16,145 +16,250 @@ pizzas.csv
 
 pizza_types.csv
 
-🧱 Schema
-sql
-Copy
-Edit
+```sql
 CREATE TABLE order_details (
     order_details_id VARCHAR(50),
     order_id VARCHAR(50),
     pizza_id VARCHAR(50),
     quantity INT,
-    PRIMARY KEY(order_details_id)
+	PRIMARY KEY(order_details_id)
 );
+```
 
+```sql
 CREATE TABLE orders (
     order_id VARCHAR(50),
     order_date DATE,
     order_time TIME,
-    PRIMARY KEY(order_id)
+	PRIMARY KEY(order_id)
 );
+```
 
+```sql
 CREATE TABLE pizza_types (
     pizza_type_id VARCHAR(50),
     name VARCHAR(100),
     category VARCHAR(50),
     ingredients VARCHAR(100)
 );
+```
 
+```sql
+DROP TABLE IF EXISTS
+pizza_types;
+```
+
+```sql
 CREATE TABLE pizzas (
     pizza_id VARCHAR(50),
     pizza_type_id VARCHAR(50),
     size VARCHAR(10),
     price NUMERIC(6, 2)
 );
-🔍 Key Business Insights
-✅ Total Orders
-Calculate how many total orders were placed to understand volume and demand:
+```
 
-sql
-Copy
-Edit
-SELECT COUNT(*) AS total FROM orders;
-💵 Revenue Tracking
-Revenue derived from the quantity of pizzas sold and their prices:
+```sql
+SELECT *
+FROM order_details;
+```
 
-sql
-Copy
-Edit
-SELECT SUM(order_details.quantity * pizzas.price) AS total_sales
-FROM order_details
-JOIN pizzas ON pizzas.pizza_id = order_details.pizza_id;
-🏆 Top-Selling Pizzas
-Get the top 5 most ordered pizza types:
+```sql
+SELECT *
+FROM orders;
+```
 
-sql
-Copy
-Edit
-SELECT pizza_types.pizza_type_id, SUM(order_details.quantity) AS total_quantity
-FROM pizza_types
-JOIN pizzas ON pizzas.pizza_type_id = pizza_types.pizza_type_id
-JOIN order_details ON order_details.pizza_id = pizzas.pizza_id
+```sql
+SELECT *
+FROM pizza_types;
+```
+
+```sql
+SELECT *
+FROM pizzas;
+```
+
+-- Basic:
+
+-- 1. Retrieve the total number of orders placed.
+```sql
+SELECT
+	COUNT(*) AS total
+FROM
+	ORDERS;
+```
+
+-- 2. Calculate the total revenue generated from pizza sales.
+```sql
+SELECT
+	SUM(ORDER_DETAILS.QUANTITY * PIZZAS.PRICE) AS TOTAL_SALES
+FROM
+	ORDER_DETAILS
+	JOIN PIZZAS ON PIZZAS.PIZZA_ID = ORDER_DETAILS.PIZZA_ID;
+```
+
+-- or
+
+```sql
+SELECT
+	SUM(ORDER_DETAILS.QUANTITY * PIZZAS.PRICE) AS TOTAL_SALES
+FROM
+	PIZZAS
+	JOIN ORDER_DETAILS ON PIZZAS.PIZZA_ID = ORDER_DETAILS.PIZZA_ID;
+```
+
+-- 3. Identify the highest-priced pizza.
+```sql
+SELECT
+	PRICE AS HIGHEST_PRICE_PIZZA
+FROM
+	PIZZAS
+ORDER BY PRICE DESC
+LIMIT 1;
+```
+
+-- 4. Identify the most common pizza size ordered.
+```sql
+SELECT
+	PIZZAS.SIZE,
+	COUNT(*)
+FROM
+	PIZZAS
+	JOIN ORDER_DETAILS ON ORDER_DETAILS.PIZZA_ID = PIZZAS.PIZZA_ID
+GROUP BY 1
+ORDER BY 2 DESC;
+```
+
+-- 5. List the top 5 most ordered pizza types along with their quantities.
+```sql
+SELECT
+	PIZZA_TYPES.PIZZA_TYPE_ID,
+	SUM(ORDER_DETAILS.QUANTITY) AS TOTAL_QUANTITY
+FROM
+	PIZZA_TYPES
+	JOIN PIZZAS ON PIZZAS.PIZZA_TYPE_ID = PIZZA_TYPES.PIZZA_TYPE_ID
+	JOIN ORDER_DETAILS ON ORDER_DETAILS.PIZZA_ID = PIZZAS.PIZZA_ID
 GROUP BY 1
 ORDER BY 2 DESC 
 LIMIT 5;
-📏 Most Common Pizza Size
-Helps in stock planning:
+```
 
-sql
-Copy
-Edit
-SELECT pizzas.size, COUNT(*)
-FROM pizzas
-JOIN order_details ON order_details.pizza_id = pizzas.pizza_id
+-- Intermediate:
+-- 1. Join the necessary tables to find the total quantity of each pizza category ordered.
+```sql
+SELECT
+	PIZZA_TYPES.CATEGORY,
+	SUM(ORDER_DETAILS.QUANTITY)
+FROM
+	PIZZA_TYPES
+	JOIN PIZZAS ON PIZZAS.PIZZA_TYPE_ID = PIZZA_TYPES.PIZZA_TYPE_ID
+	JOIN ORDER_DETAILS ON ORDER_DETAILS.PIZZA_ID = PIZZAS.PIZZA_ID
 GROUP BY 1
 ORDER BY 2 DESC;
-🍽️ Category-wise Sales Volume
-Breakdown of quantity sold by pizza category:
+```
 
-sql
-Copy
-Edit
-SELECT pizza_types.category, SUM(order_details.quantity)
-FROM pizza_types
-JOIN pizzas ON pizzas.pizza_type_id = pizza_types.pizza_type_id
-JOIN order_details ON order_details.pizza_id = pizzas.pizza_id
+-- 2. Determine the distribution of orders by hour of the day.
+```sql
+SELECT
+	EXTRACT(HOUR FROM ORDERS.ORDER_TIME) AS ORDER_HOUR,
+	COUNT(DISTINCT ORDERS.ORDER_ID) AS ORDER_COUNT -- this is combining orders from both table so we have to conside the the unique orders using order id so we use DISTINCT
+FROM
+	ORDERS
+	INNER JOIN ORDER_DETAILS ON ORDER_DETAILS.ORDER_ID = ORDERS.ORDER_ID
 GROUP BY 1
 ORDER BY 2 DESC;
-🕒 Hourly Order Patterns
-Determine busiest hours:
+```
 
-sql
-Copy
-Edit
-SELECT EXTRACT(HOUR FROM order_time) AS order_hour, COUNT(order_id) AS order_count
-FROM orders
+-- or
+
+```sql
+SELECT
+	EXTRACT(HOUR FROM ORDER_TIME) AS ORDER_HOUR,
+	COUNT(ORDER_ID) AS ORDER_COUNT
+FROM
+	ORDERS
 GROUP BY 1
 ORDER BY 2 DESC;
-📆 Daily Average Sales
-Evaluate average pizza orders per day:
+```
 
-sql
-Copy
-Edit
-SELECT ROUND(AVG(average_pizzas), 0) AS avg_ordered_pizzas
-FROM (
-    SELECT order_date, SUM(quantity) AS average_pizzas
-    FROM orders
-    JOIN order_details ON order_details.order_id = orders.order_id
-    GROUP BY order_date
-) AS ordered_quantity;
-💰 Cumulative Revenue Over Time
-Track sales growth:
+-- 3. Join relevant tables to find the category-wise distribution of pizzas.
+```sql
+SELECT
+	CATEGORY,
+	COUNT(NAME) AS PIZZA_COUNT
+FROM
+	PIZZA_TYPES
+GROUP BY 1;
+```
 
-sql
-Copy
-Edit
-SELECT order_date, SUM(revenue) OVER (ORDER BY order_date) AS cum_revenue
-FROM (
-    SELECT orders.order_date, SUM(order_details.quantity * pizzas.price) AS revenue
-    FROM order_details
-    JOIN pizzas ON pizzas.pizza_id = order_details.pizza_id
-    JOIN orders ON orders.order_id = order_details.order_id
-    GROUP BY 1
-) AS sales;
-🥇 Category-wise Top 3 Pizzas by Revenue
-sql
-Copy
-Edit
-SELECT category, name, revenue
-FROM (
-    SELECT category, name, revenue,
-    RANK() OVER (PARTITION BY category ORDER BY revenue DESC) AS rn
-    FROM (
-        SELECT pizza_types.category, pizza_types.name, SUM(order_details.quantity * pizzas.price) AS revenue
-        FROM pizza_types
-        JOIN pizzas ON pizza_types.pizza_type_id = pizzas.pizza_type_id
-        JOIN order_details ON order_details.pizza_id = pizzas.pizza_id
-        GROUP BY 1, 2
-    ) AS a
-) AS b
-WHERE rn <= 3;
+-- 4. Group the orders by date and calculate the average number of pizzas ordered per day.
+```sql
+SELECT
+	ROUND(AVG(AVERAGE_PIZZAS), 0) AS AVG_ORDERED_PIZZAS
+FROM
+	(SELECT ORDER_DATE, SUM(QUANTITY) AS AVERAGE_PIZZAS
+	 FROM ORDERS
+	 JOIN ORDER_DETAILS ON ORDER_DETAILS.ORDER_ID = ORDERS.ORDER_ID
+	 GROUP BY ORDER_DATE
+	)AS ORDERED_QUANTITY;
+```
+
+-- 5.Determine the top 3 most ordered pizza types(name, category and size) based on revenue.
+```sql
+SELECT
+	NAME, CATEGORY, SIZE, SUM(PRICE * QUANTITY) AS PIZZA_REVENUE
+FROM
+	PIZZA_TYPES
+	INNER JOIN PIZZAS ON PIZZAS.PIZZA_TYPE_ID = PIZZA_TYPES.PIZZA_TYPE_ID
+	INNER JOIN ORDER_DETAILS ON ORDER_DETAILS.PIZZA_ID = PIZZAS.PIZZA_ID
+GROUP BY 1, 2, 3
+ORDER BY 4 DESC
+LIMIT 3;
+```
+
+-- Advanced:
+
+-- 1. Calculate the percentage contribution of each pizza type to total revenue.
+```sql
+SELECT
+	PIZZA_TYPES.CATEGORY,
+	ROUND((SUM(ORDER_DETAILS.QUANTITY * PIZZAS.PRICE)) / (SELECT SUM(ORDER_DETAILS.QUANTITY * PIZZAS.PRICE) AS TOTAL_SALES
+	FROM ORDER_DETAILS
+	JOIN PIZZAS ON PIZZAS.PIZZA_ID = ORDER_DETAILS.PIZZA_ID
+	),2) * 100 AS REVENUE
+FROM
+	PIZZA_TYPES
+	JOIN PIZZAS ON PIZZA_TYPES.PIZZA_TYPE_ID = PIZZAS.PIZZA_TYPE_ID
+	JOIN ORDER_DETAILS ON ORDER_DETAILS.PIZZA_ID = PIZZAS.PIZZA_ID
+GROUP BY 1
+ORDER BY 2 DESC;
+```
+
+-- 2. Analyze the cumulative revenue generated over time.
+```sql
+SELECT
+	ORDER_DATE, SUM(REVENUE) OVER (ORDER BY ORDER_DATE) AS CUM_REVENUE
+FROM
+	(SELECT ORDERS.ORDER_DATE, SUM(ORDER_DETAILS.QUANTITY * PIZZAS.PRICE) AS REVENUE
+	FROM ORDER_DETAILS
+	JOIN PIZZAS ON PIZZAS.PIZZA_ID = ORDER_DETAILS.PIZZA_ID
+	JOIN ORDERS ON ORDERS.ORDER_ID = ORDER_DETAILS.ORDER_ID
+GROUP BY 1) AS SALES;
+```
+
+-- 3.Determine the top 3 most ordered pizza types based on revenue for each pizza category.
+```sql
+SELECT CATEGORY, NAME, REVENUE
+FROM
+	(SELECT CATEGORY, NAME, REVENUE, RANK() OVER (PARTITION BY CATEGORY ORDER BY REVENUE DESC) AS RN
+	FROM
+	(SELECT PIZZA_TYPES.CATEGORY, PIZZA_TYPES.NAME, SUM(ORDER_DETAILS.QUANTITY * PIZZAS.PRICE) AS REVENUE
+	FROM PIZZA_TYPES
+	JOIN PIZZAS ON PIZZA_TYPES.PIZZA_TYPE_ID = PIZZAS.PIZZA_TYPE_ID
+	JOIN ORDER_DETAILS ON ORDER_DETAILS.PIZZA_ID = PIZZAS.PIZZA_ID
+	GROUP BY 1, 2) AS A) AS B -- we are using another subquery AS b beacuse we cannot use WHERE clause directly to check the value of rn
+WHERE RN <= 3;
+```
+
 🧠 Advanced SQL Techniques Used
 Window Functions:
 For ranking (RANK()) and cumulative aggregations (SUM() OVER).
